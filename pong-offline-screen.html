@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong - Offline</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Arial', sans-serif;
+            background-color: #0a0a1a;
+            color: #00ffff;
+            overflow: hidden;
+        }
+        #container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        #offline-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4vw;
+            text-align: center;
+            z-index: 10;
+        }
+        #url-text {
+            font-size: 0.4em;
+            margin-top: 20px;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        @keyframes glow {
+            0% { text-shadow: 0 0 5px #00ffff; }
+            50% { text-shadow: 0 0 20px #00ffff, 0 0 30px #00ffff; }
+            100% { text-shadow: 0 0 5px #00ffff; }
+        }
+        #offline-text {
+            animation: glow 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <canvas id="bg-canvas"></canvas>
+        <div id="offline-text">
+            PONG MASTER
+            <div id="url-text">Welcome to ft_pong</div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Three.js setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('bg-canvas'), alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        // Grid (optional, can be removed if not needed)
+        const gridHelper = new THREE.GridHelper(2000, 200, 0x00ffff, 0x00ffff);
+        gridHelper.position.y = -10;
+        gridHelper.material.opacity = 0.1;
+        gridHelper.material.transparent = true;
+        scene.add(gridHelper);
+
+        // Neon lines
+        function createNeonLine(points) {
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({
+                color: 0x00ffff,
+                linewidth: 2,
+                transparent: true,
+                opacity: 0.7
+            });
+            return new THREE.Line(geometry, material);
+        }
+
+        function createNeonPoint(position) {
+            const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+            const material = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+            const point = new THREE.Mesh(geometry, material);
+            point.position.copy(position);
+            return point;
+        }
+
+        // Create circuit pattern
+        const circuits = [
+            [
+                new THREE.Vector3(-50, 30, 0),
+                // new THREE.Vector3(0, 30, 0),
+                // new THREE.Vector3(0, 0, 0),
+                // new THREE.Vector3(50, 0, 0)
+            ],
+            [
+                new THREE.Vector3(-50, -30, 0),
+                new THREE.Vector3(-20, -30, 0),
+                // new THREE.Vector3(-20, 20, 0),
+                // new THREE.Vector3(20, 20, 0),
+                // new THREE.Vector3(20, -20, 0),
+                // new THREE.Vector3(50, -20, 0)
+            ]
+        ];
+
+        circuits.forEach(circuit => {
+            scene.add(createNeonLine(circuit));
+            circuit.forEach(point => scene.add(createNeonPoint(point)));
+        });
+
+        camera.position.z = 100;
+
+        // Animation
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Rotate grid (if you want to keep it)
+            gridHelper.rotation.x += 0.0005;
+            gridHelper.rotation.y += 0.0002;
+
+            // Animate neon intensity
+            scene.children.forEach(child => {
+                if (child.material && child.material.color) {
+                    child.material.opacity = 0.5 + Math.sin(Date.now() * 0.003) * 0.3;
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Mouse interaction
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        function onMouseMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(scene.children);
+
+            for (let i = 0; i < intersects.length; i++) {
+                intersects[i].object.material.color.setHex(0xff00ff);
+            }
+        }
+
+        window.addEventListener('mousemove', onMouseMove, false);
+    </script>
+</body>
+</html>
