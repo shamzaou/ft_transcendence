@@ -1,0 +1,28 @@
+graph TD
+    A[Home Page] --> B[Play]
+    A --> C[Leaderboard]
+    A --> D[Profile]
+    A --> E[Authentication]
+    
+    B --> F[Game Lobby]
+    F --> G[Pong Game]
+    F --> H[Tournament]
+    
+    C --> I[Global Rankings]
+    C --> J[Personal Stats]
+    
+    D --> K[User Info]
+    D --> L[Match History]
+    D --> M[Friends List]
+    
+    E --> N[Login]
+    E --> O[Registration]
+    E --> P[OAuth]
+    
+    G --> Q[Single Player]
+    G --> R[Multiplayer]
+    
+    H --> S[Create Tournament]
+    H --> T[Join Tournament]
+    
+    M --> U[Add Friend]
