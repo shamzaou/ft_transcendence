@@ -3,165 +3,301 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Ping Pong</title>
+    <title>Improved Multi-Mode Ping Pong</title>
     <style>
-        body { 
+        body {
             margin: 0;
             overflow: hidden;
+            font-family: 'Orbitron', sans-serif;
+            background-color: #0a0a0a;
+            color: #00ccff;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
         }
         #score {
+            font-size: 36px;
+            text-shadow: 0 0 10px #00ccff66;
+        }
+        #instructions {
+            margin-top: 10px;
+            font-size: 18px;
+            color: #ff00aa;
+            text-shadow: 0 0 5px #ff00aa66;
+        }
+        #modeSelector {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            color: white;
-            font-family: Arial, sans-serif;
-            font-size: 20px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        button {
+            font-size: 24px;
+            color: #00ccff;
+            background: transparent;
+            border: 2px solid #00ccff;
+            padding: 15px 30px;
+            margin: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 0 10px #00ccff66;
+        }
+        button:hover {
+            background: #00ccff22;
+            box-shadow: 0 0 20px #00ccff;
         }
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="score">Player 1: 0 | Player 2: 0</div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script>
-        let scene, camera, renderer;
-        let table, ball, paddle1, paddle2, net;
-        let ballVelocity = new THREE.Vector3(0.05, 0, 0.02);
-        let score = {player1: 0, player2: 0};
+<div id="ui">
+    <div id="score"></div>
+    <div id="instructions"></div>
+</div>
+<div id="modeSelector">
+    <button id="mode1v1">1v1 Mode</button>
+    <button id="mode4p">4 Players Mode</button>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+    let scene, camera, renderer;
+    let table, ball, paddles = [];
+    let ballVelocity = new THREE.Vector3(0.06, 0, 0.03);
+    let scores = [];
+    let gameStarted = false;
+    let currentMode = '';
+    let keysPressed = {};
 
-        function init() {
-            // Create scene
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x000000);
-
-            // Create camera
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 7, 10);
-            camera.lookAt(0, 0, 0);
-
-            // Create renderer
-            renderer = new THREE.WebGLRenderer();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
-
-            // Add lights
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambientLight);
-            const pointLight = new THREE.PointLight(0xffffff, 1);
-            pointLight.position.set(5, 10, 5);
-            scene.add(pointLight);
-
-            // Create table
-            const tableGeometry = new THREE.BoxGeometry(10, 0.5, 6);
-            const tableMaterial = new THREE.MeshPhongMaterial({ color: 0x1a5f1a });
-            table = new THREE.Mesh(tableGeometry, tableMaterial);
-            scene.add(table);
-
-            // Create ball
-            const ballGeometry = new THREE.SphereGeometry(0.1, 32, 32);
-            const ballMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
-            ball = new THREE.Mesh(ballGeometry, ballMaterial);
-            ball.position.set(0, 0.5, 0);
-            scene.add(ball);
-
-            // Create paddles
-            const paddleGeometry = new THREE.BoxGeometry(0.2, 0.5, 1);
-            const paddleMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-            paddle1 = new THREE.Mesh(paddleGeometry, paddleMaterial);
-            paddle1.position.set(-4.9, 0.5, 0);
-            scene.add(paddle1);
-
-            paddle2 = new THREE.Mesh(paddleGeometry, paddleMaterial);
-            paddle2.position.set(4.9, 0.5, 0);
-            scene.add(paddle2);
-
-            // Create net
-            const netGeometry = new THREE.BoxGeometry(0.1, 0.5, 6);
-            const netMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
-            net = new THREE.Mesh(netGeometry, netMaterial);
-            net.position.set(0, 0.5, 0);
-            scene.add(net);
-
-            // Add event listeners
-            window.addEventListener('resize', onWindowResize, false);
-            document.addEventListener('keydown', onKeyDown, false);
+    const MODES = {
+        '1v1': {
+            players: 2,
+            tableSize: { width: 10, height: 6 },
+            paddlePositions: [
+                { pos: new THREE.Vector3(-4.9, 0.5, 0), rot: new THREE.Euler(0, 0, 0) },
+                { pos: new THREE.Vector3(4.9, 0.5, 0), rot: new THREE.Euler(0, 0, 0) }
+            ],
+            instructions: 'P1: W/S | P2: ↑/↓'
+        },
+        '4p': {
+            players: 4,
+            tableSize: { width: 10, height: 10 },
+            paddlePositions: [
+                { pos: new THREE.Vector3(-4.9, 0.5, 0), rot: new THREE.Euler(0, 0, 0) },
+                { pos: new THREE.Vector3(4.9, 0.5, 0), rot: new THREE.Euler(0, 0, 0) },
+                { pos: new THREE.Vector3(0, 0.5, -4.9), rot: new THREE.Euler(0, Math.PI/2, 0) },
+                { pos: new THREE.Vector3(0, 0.5, 4.9), rot: new THREE.Euler(0, Math.PI/2, 0) }
+            ],
+            instructions: 'P1: W/S | P2: ↑/↓ | P3: A/D | P4: J/L'
         }
+    };
 
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+    function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a0a);
+
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 7, 10);
+        camera.lookAt(0, 0, 0);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0x333333);
+        scene.add(ambientLight);
+
+        const spotLight = new THREE.SpotLight(0xffffff, 0.5);
+        spotLight.position.set(0, 15, 0);
+        scene.add(spotLight);
+
+        // Event listeners
+        window.addEventListener('resize', onWindowResize, false);
+        document.addEventListener('keydown', (event) => { keysPressed[event.key] = true; });
+        document.addEventListener('keyup', (event) => { keysPressed[event.key] = false; });
+        document.getElementById('mode1v1').addEventListener('click', () => startGame('1v1'));
+        document.getElementById('mode4p').addEventListener('click', () => startGame('4p'));
+    }
+
+    function createGameElements(mode) {
+        // Clear existing elements
+        while(scene.children.length > 0){
+            scene.remove(scene.children[0]);
         }
+        paddles = [];
+        scores = new Array(MODES[mode].players).fill(0);
 
-        function onKeyDown(event) {
-            const speed = 0.2;
-            switch(event.key) {
-                case 'w':
-                    if (paddle1.position.z < 2.5) paddle1.position.z += speed;
-                    break;
-                case 's':
-                    if (paddle1.position.z > -2.5) paddle1.position.z -= speed;
-                    break;
-                case 'ArrowUp':
-                    if (paddle2.position.z < 2.5) paddle2.position.z += speed;
-                    break;
-                case 'ArrowDown':
-                    if (paddle2.position.z > -2.5) paddle2.position.z -= speed;
-                    break;
-            }
+        // Create table
+        const tableGeometry = new THREE.BoxGeometry(MODES[mode].tableSize.width, 0.2, MODES[mode].tableSize.height);
+        const tableMaterial = new THREE.MeshPhongMaterial({
+            color: 0x000000,
+            specular: 0x111111,
+            shininess: 100
+        });
+        table = new THREE.Mesh(tableGeometry, tableMaterial);
+        scene.add(table);
+
+        // Create table border
+        const borderGeometry = new THREE.EdgesGeometry(tableGeometry);
+        const borderMaterial = new THREE.LineBasicMaterial({ color: 0x00ccff, linewidth: 2 });
+        const border = new THREE.LineSegments(borderGeometry, borderMaterial);
+        table.add(border);
+
+        // Create ball
+        const ballGeometry = new THREE.SphereGeometry(0.2, 32, 32);
+        const ballMaterial = new THREE.MeshPhongMaterial({
+            color: 0xff00aa,
+            emissive: 0xff00aa,
+            emissiveIntensity: 0.5
+        });
+        ball = new THREE.Mesh(ballGeometry, ballMaterial);
+        ball.position.set(0, 0.5, 0);
+        scene.add(ball);
+
+        // Create paddles
+        const paddleGeometry = new THREE.BoxGeometry(0.2, 0.8, 1.4);
+        const paddleMaterial = new THREE.MeshPhongMaterial({
+            color: 0x00ccff,
+            emissive: 0x00ccff,
+            emissiveIntensity: 0.5
+        });
+
+        MODES[mode].paddlePositions.forEach(({pos, rot}) => {
+            const paddle = new THREE.Mesh(paddleGeometry, paddleMaterial);
+            paddle.position.copy(pos);
+            paddle.rotation.copy(rot);
+            scene.add(paddle);
+            paddles.push(paddle);
+        });
+
+        // Update instructions
+        document.getElementById('instructions').textContent = MODES[mode].instructions;
+
+        // Keep camera position consistent
+        camera.position.set(0, 7, 10);
+        camera.lookAt(0, 0, 0);
+    }
+
+    function startGame(mode) {
+        currentMode = mode;
+        gameStarted = true;
+        document.getElementById('modeSelector').style.display = 'none';
+        createGameElements(mode);
+        resetBall();
+        updateScore();
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function updatePaddlePositions() {
+        const speed = 0.2;
+        const tableHalfWidth = MODES[currentMode].tableSize.width / 2;
+        const tableHalfHeight = MODES[currentMode].tableSize.height / 2;
+
+        if (keysPressed['w'] && paddles[0].position.z > -tableHalfHeight + 1) paddles[0].position.z -= speed;
+        if (keysPressed['s'] && paddles[0].position.z < tableHalfHeight - 1) paddles[0].position.z += speed;
+
+        if (keysPressed['ArrowUp'] && paddles[1].position.z > -tableHalfHeight + 1) paddles[1].position.z -= speed;
+        if (keysPressed['ArrowDown'] && paddles[1].position.z < tableHalfHeight - 1) paddles[1].position.z += speed;
+
+        if (currentMode === '4p') {
+            if (keysPressed['a'] && paddles[2].position.x > -tableHalfWidth + 1) paddles[2].position.x -= speed;
+            if (keysPressed['d'] && paddles[2].position.x < tableHalfWidth - 1) paddles[2].position.x += speed;
+
+            if (keysPressed['j'] && paddles[3].position.x > -tableHalfWidth + 1) paddles[3].position.x -= speed;
+            if (keysPressed['l'] && paddles[3].position.x < tableHalfWidth - 1) paddles[3].position.x += speed;
         }
+    }
 
-        function updateScore() {
-            document.getElementById('score').textContent = `Player 1: ${score.player1} | Player 2: ${score.player2}`;
-        }
+    function updateScore() {
+        document.getElementById('score').textContent = scores.join(' - ');
+    }
 
-        function animate() {
-            requestAnimationFrame(animate);
+    function animate() {
+        requestAnimationFrame(animate);
 
+        if (gameStarted) {
+            updatePaddlePositions();
             // Move the ball
             ball.position.add(ballVelocity);
 
-            // Check for collisions with table edges
-            if (ball.position.z > 2.9 || ball.position.z < -2.9) {
-                ballVelocity.z = -ballVelocity.z;
-            }
+            // Check for collisions
+            checkCollisions();
 
-            // Check for collisions with paddles
-            if (ball.position.x < -4.7 && ball.position.z > paddle1.position.z - 0.5 && ball.position.z < paddle1.position.z + 0.5) {
-                ballVelocity.x = -ballVelocity.x;
-                ballVelocity.z += (ball.position.z - paddle1.position.z) * 0.1; // Add some spin
-            }
-            if (ball.position.x > 4.7 && ball.position.z > paddle2.position.z - 0.5 && ball.position.z < paddle2.position.z + 0.5) {
-                ballVelocity.x = -ballVelocity.x;
-                ballVelocity.z += (ball.position.z - paddle2.position.z) * 0.1; // Add some spin
-            }
-
-            // Check for scoring
-            if (ball.position.x < -5) {
-                score.player2++;
-                updateScore();
-                resetBall();
-            } else if (ball.position.x > 5) {
-                score.player1++;
-                updateScore();
-                resetBall();
-            }
-
-            renderer.render(scene, camera);
+            // Rotate the ball
+            ball.rotation.x += ballVelocity.z * 0.2;
+            ball.rotation.z -= ballVelocity.x * 0.2;
         }
 
-        function resetBall() {
-            ball.position.set(0, 0.5, 0);
-            ballVelocity = new THREE.Vector3(
-                (Math.random() > 0.5 ? 0.05 : -0.05), // Random X direction
-                0,
-                (Math.random() - 0.5) * 0.04 // Random Z direction
-            );
+        renderer.render(scene, camera);
+    }
+
+    function checkCollisions() {
+        const halfWidth = MODES[currentMode].tableSize.width / 2;
+        const halfHeight = MODES[currentMode].tableSize.height / 2;
+
+        // Table edge collisions
+        if (Math.abs(ball.position.z) > halfHeight - 0.2) {
+            ballVelocity.z = -ballVelocity.z;
+        }
+        if (Math.abs(ball.position.x) > halfWidth - 0.2) {
+            ballVelocity.x = -ballVelocity.x;
         }
 
-        init();
-        animate();
-    </script>
+        // Paddle collisions
+        paddles.forEach((paddle, index) => {
+            if (index < 2) {  // Side paddles (for both modes)
+                if (Math.abs(ball.position.x - paddle.position.x) < 0.4 &&
+                    Math.abs(ball.position.z - paddle.position.z) < 0.9) {
+                    ballVelocity.x = -ballVelocity.x;
+                    ballVelocity.z += (ball.position.z - paddle.position.z) * 0.1;
+                }
+            } else {  // Top and bottom paddles (for 4p mode)
+                if (Math.abs(ball.position.z - paddle.position.z) < 0.4 &&
+                    Math.abs(ball.position.x - paddle.position.x) < 0.9) {
+                    ballVelocity.z = -ballVelocity.z;
+                    ballVelocity.x += (ball.position.x - paddle.position.x) * 0.1;
+                }
+            }
+        });
+
+        // Normalize ball velocity
+        const speed = 0.12;
+        ballVelocity.normalize().multiplyScalar(speed);
+
+        // Scoring
+        if (Math.abs(ball.position.x) > halfWidth || Math.abs(ball.position.z) > halfHeight) {
+            let scoringPlayer = 0;
+            if (ball.position.x < -halfWidth) scoringPlayer = 1;
+            else if (ball.position.x > halfWidth) scoringPlayer = 0;
+            else if (ball.position.z < -halfHeight) scoringPlayer = 3;
+            else if (ball.position.z > halfHeight) scoringPlayer = 2;
+
+            scores[scoringPlayer]++;
+            updateScore();
+            resetBall();
+        }
+    }
+
+    function resetBall() {
+        ball.position.set(0, 0.5, 0);
+        const angle = Math.random() * Math.PI * 2;
+        ballVelocity.set(Math.cos(angle) * 0.06, 0, Math.sin(angle) * 0.06);
+    }
+
+    init();
+    animate();
+</script>
 </body>
 </html>
-
-

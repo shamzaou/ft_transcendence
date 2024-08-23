@@ -1,0 +1,79 @@
+# ft_transcendence Website Content Outline
+
+## 1. Home Page
+- Welcome message
+- Brief introduction to the Pong game and the platform
+- Featured tournaments or upcoming events
+- Quick links to Play, Leaderboard, and Profile sections
+- Login/Register buttons (if not logged in)
+
+## 2. Play Section
+### 2.1 Game Lobby
+- List of available game rooms
+- Option to create a new game room
+- Quick match button for random matchmaking
+- Chat feature for players in the lobby
+
+### 2.2 Pong Game
+- The actual Pong game interface
+- Real-time score display
+- Game settings (if customizable)
+- Post-game summary and option to rematch or return to lobby
+
+### 2.3 Tournament
+- List of ongoing and upcoming tournaments
+- Tournament creation interface
+- Tournament brackets and schedules
+- Results and prize information
+
+## 3. Leaderboard
+- Global player rankings
+- Filtering options (e.g., by time period, region)
+- Personal ranking and stats summary
+- Recent matches and their outcomes
+
+## 4. Profile
+### 4.1 User Info
+- Username and avatar
+- Personal stats (wins, losses, win rate)
+- Achievements and badges
+- Account settings and preferences
+
+### 4.2 Match History
+- Detailed list of past matches
+- Filters for game type (casual, ranked, tournament)
+- Performance graphs and trends
+
+### 4.3 Friends List
+- List of friends with online status
+- Add friend functionality
+- Challenge friend to a game option
+- Private messaging or chat feature
+
+## 5. Authentication
+### 5.1 Login
+- Username/email and password fields
+- "Remember me" option
+- Forgot password link
+- Option to login with OAuth (e.g., 42 intranet)
+
+### 5.2 Registration
+- Required fields (username, email, password)
+- Terms of service agreement
+- Email verification process
+- Option to register with OAuth
+
+## 6. Additional Features
+### 6.1 Customization Options
+- Theme selection (if implemented)
+- Paddle and ball customization (if implemented)
+- Sound settings
+
+### 6.2 Help & Support
+- FAQ section
+- Game rules and instructions
+- Contact form for support
+
+### 6.3 About
+- Information about the ft_transcendence project
+- Credits and acknowledgments
