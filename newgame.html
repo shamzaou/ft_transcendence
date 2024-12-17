@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyberpunk Retro Ping Pong</title>
+    <style>
+        body { 
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Orbitron', sans-serif;
+            background-color: #0a0a0a;
+        }
+        .ui-element {
+            position: absolute;
+            color: #00ccff;
+            text-shadow: 0 0 10px #00ccff66;
+            text-align: center;
+            font-family: 'Orbitron', sans-serif;
+        }
+        #score {
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 36px;
+        }
+        #instructions {
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            color: #ff00aa;
+            text-shadow: 0 0 5px #ff00aa66;
+        }
+        #pauseText {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            display: none;
+        }
+        .game-button {
+            position: absolute;
+            font-size: 24px;
+            color: #00ccff;
+            background: transparent;
+            border: 2px solid #00ccff;
+            padding: 15px 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 0 10px #00ccff66;
+        }
+        .game-button:hover {
+            background: #00ccff22;
+            box-shadow: 0 0 20px #00ccff;
+        }
+        #startButton {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="score" class="ui-element">00 - 00</div>
+    <div id="instructions" class="ui-element">P1: W/S | P2: ↑/↓ | SPACE: Pause</div>
+    <div id="pauseText" class="ui-element">PAUSED</div>
+    <button id="startButton" class="game-button">Start Game</button>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Game State Management
+        const GameState = {
+            MENU: 'menu',
+            PLAYING: 'playing',
+            PAUSED: 'paused'
+        };
+
+        class GameManager {
+            constructor() {
+                this.currentState = GameState.MENU;
+                this.score = { player1: 0, player2: 0 };
+                this.clock = new THREE.Clock();
+                this.fixedTimeStep = 1/60;
+                this.accumulator = 0;
+            }
+
+            setState(newState) {
+                this.currentState = newState;
+                switch(newState) {
+                    case GameState.PLAYING:
+                        document.getElementById('startButton').style.display = 'none';
+                        document.getElementById('pauseText').style.display = 'none';
+                        this.clock.start();
+                        break;
+                    case GameState.PAUSED:
+                        document.getElementById('pauseText').style.display = 'block';
+                        this.clock.stop();
+                        break;
+                    case GameState.MENU:
+                        document.getElementById('startButton').style.display = 'block';
+                        document.getElementById('pauseText').style.display = 'none';
+                        break;
+                }
+            }
+
+            togglePause() {
+                if (this.currentState === GameState.PLAYING) {
+                    this.setState(GameState.PAUSED);
+                } else if (this.currentState === GameState.PAUSED) {
+                    this.setState(GameState.PLAYING);
+                }
+            }
+
+            updateScore(scorer) {
+                this.score[scorer]++;
+                document.getElementById('score').textContent = 
+                    `${this.score.player1.toString().padStart(2, '0')} - ${this.score.player2.toString().padStart(2, '0')}`;
+            }
+        }
+
+        // Physics and Game Logic
+        class GamePhysics {
+            constructor() {
+                this.maxBallSpeed = 0.15;
+                this.minBallSpeed = 0.06;
+                this.ballVelocity = new THREE.Vector3();
+                this.ballSpin = new THREE.Vector3();
+                this.resetBall();
+            }
+
+            resetBall() {
+                this.ballVelocity.set(
+                    (Math.random() > 0.5 ? this.minBallSpeed : -this.minBallSpeed),
+                    0,
+                    (Math.random() - 0.5) * 0.04
+                );
+                this.ballSpin.set(0, 0, 0);
+                return new THREE.Vector3(0, 0.5, 0);
+            }
+
+            handlePaddleCollision(ballPos, paddlePos, isLeftPaddle) {
+                const relativeIntersectZ = (paddlePos.z - ballPos.z) / 0.9; // Normalized -1 to 1
+                const bounceAngle = relativeIntersectZ * Math.PI / 4;
+                
+                const currentSpeed = Math.min(
+                    this.ballVelocity.length() * 1.05,
+                    this.maxBallSpeed
+                );
+
+                this.ballVelocity.x = currentSpeed * (isLeftPaddle ? Math.abs(Math.cos(bounceAngle)) : -Math.abs(Math.cos(bounceAngle)));
+                this.ballVelocity.z = currentSpeed * -Math.sin(bounceAngle);
+                
+                // Add spin based on paddle hit position
+                this.ballSpin.z = relativeIntersectZ * 0.1;
+            }
+
+            updatePhysics(ball, paddle1, paddle2) {
+                // Apply spin effect to ball velocity
+                this.ballVelocity.z += this.ballSpin.z * 0.01;
+                
+                // Update ball position
+                ball.position.add(this.ballVelocity);
+                
+                // Apply spin to ball rotation
+                ball.rotation.x += this.ballVelocity.z * 0.2;
+                ball.rotation.z -= this.ballVelocity.x * 0.2;
+
+                // Wall collisions
+                if (ball.position.z > 2.9 || ball.position.z < -2.9) {
+                    this.ballVelocity.z = -this.ballVelocity.z * 0.9;
+                    this.ballSpin.z *= 0.5;
+                }
+
+                // Paddle collisions
+                if (ball.position.x < -4.7 && ball.position.z > paddle1.position.z - 0.7 && 
+                    ball.position.z < paddle1.position.z + 0.7) {
+                    this.handlePaddleCollision(ball.position, paddle1.position, true);
+                }
+                if (ball.position.x > 4.7 && ball.position.z > paddle2.position.z - 0.7 && 
+                    ball.position.z < paddle2.position.z + 0.7) {
+                    this.handlePaddleCollision(ball.position, paddle2.position, false);
+                }
+
+                // Scoring
+                if (ball.position.x < -5) return 'player2';
+                if (ball.position.x > 5) return 'player1';
+                return null;
+            }
+        }
+
+        // Renderer and Scene Setup
+        class GameRenderer {
+            constructor() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0a0a0a);
+
+                this.setupCamera();
+                this.setupRenderer();
+                this.setupLights();
+                this.createGameObjects();
+
+                window.addEventListener('resize', () => this.handleResize(), false);
+            }
+
+            setupCamera() {
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.set(0, 7, 10);
+                this.camera.lookAt(0, 0, 0);
+            }
+
+            setupRenderer() {
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                document.body.appendChild(this.renderer.domElement);
+            }
+
+            setupLights() {
+                const ambientLight = new THREE.AmbientLight(0x333333);
+                this.scene.add(ambientLight);
+
+                const spotLight = new THREE.SpotLight(0xffffff, 0.5);
+                spotLight.position.set(0, 10, 0);
+                this.scene.add(spotLight);
+            }
+
+            createGameObjects() {
+                // ===================== Table =====================
+                const tableGeometry = new THREE.BoxGeometry(10, 0.2, 6);
+                const tableMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0x000000,
+                    specular: 0x111111,
+                    shininess: 100
+                });
+                this.table = new THREE.Mesh(tableGeometry, tableMaterial);
+                this.scene.add(this.table);
+
+                // ===================== Table border =====================
+                const borderGeometry = new THREE.EdgesGeometry(tableGeometry);
+                const borderMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
+                const border = new THREE.LineSegments(borderGeometry, borderMaterial);
+                this.table.add(border);
+
+                // ===================== Ball Creation =====================
+
+                // Ball with texture
+                const ballGeometry = new THREE.SphereGeometry(0.2, 32, 32);
+
+                // Create a canvas for the ball texture
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 256;
+                canvas.height = 256;
+
+                // Draw the texture pattern
+                ctx.fillStyle = '#ff00aa';  // Base color
+                ctx.fillRect(0, 0, 256, 256);
+
+                // Add stripes to make spin visible
+                ctx.fillStyle = '#ffffff';  // Changed to white for better visibility
+                for (let i = 0; i < 8; i++) {
+                    ctx.beginPath();
+                    ctx.arc(128, 128, 128, i * Math.PI / 4, (i + 0.5) * Math.PI / 4);
+                    ctx.lineTo(128, 128);
+                    ctx.fill();
+                }
+
+                // Add some dots for additional spin visibility
+                ctx.fillStyle = '#ff1493';  // Keeping the dots pink
+                for (let i = 0; i < 12; i++) {
+                    const angle = (i / 12) * Math.PI * 2;
+                    const x = 128 + Math.cos(angle) * 64;
+                    const y = 128 + Math.sin(angle) * 64;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Create texture from canvas
+                const texture = new THREE.CanvasTexture(canvas);
+
+                const ballMaterial = new THREE.MeshPhongMaterial({ 
+                    map: texture,
+                    color: 0xffffff,      // Added white color to make texture visible
+                    emissive: 0xff00aa,
+                    emissiveIntensity: 0.3,
+                    shininess: 30         // Reduced shininess
+                });
+
+                this.ball = new THREE.Mesh(ballGeometry, ballMaterial);
+                this.ball.position.set(0, 0.5, 0);
+
+
+                // ===================== Paddles =====================
+                const paddleGeometry = new THREE.BoxGeometry(0.2, 0.8, 1.4);
+                const paddleMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0x00ccff,
+                    emissive: 0x00ccff,
+                    emissiveIntensity: 0.5
+                });
+                
+                this.paddle1 = new THREE.Mesh(paddleGeometry, paddleMaterial);
+                this.paddle1.position.set(-4.9, 0.5, 0);
+                this.scene.add(this.paddle1);
+
+                this.paddle2 = new THREE.Mesh(paddleGeometry, paddleMaterial);
+                this.paddle2.position.set(4.9, 0.5, 0);
+                this.scene.add(this.paddle2);
+
+                // Net
+                const netGeometry = new THREE.BoxGeometry(0.05, 0.4, 6);
+                const netMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0x444444,
+                    emissive: 0x444444,
+                    emissiveIntensity: 0.2
+                });
+                this.net = new THREE.Mesh(netGeometry, netMaterial);
+                this.net.position.set(0, 0.3, 0);
+                this.scene.add(this.net);
+            }
+
+            handleResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            render() {
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        // Input Handler
+        class InputHandler {
+            constructor(paddle1, paddle2) {
+                this.paddle1 = paddle1;
+                this.paddle2 = paddle2;
+                this.keys = new Set();
+                
+                document.addEventListener('keydown', (e) => this.keys.add(e.key));
+                document.addEventListener('keyup', (e) => this.keys.delete(e.key));
+            }
+
+            update() {
+                const paddleSpeed = 0.15;
+                
+                // Paddle 1 controls
+                if (this.keys.has('w') && this.paddle1.position.z > -2.5) {
+                    this.paddle1.position.z -= paddleSpeed;
+                }
+                if (this.keys.has('s') && this.paddle1.position.z < 2.5) {
+                    this.paddle1.position.z += paddleSpeed;
+                }
+
+                // Paddle 2 controls
+                if (this.keys.has('ArrowUp') && this.paddle2.position.z > -2.5) {
+                    this.paddle2.position.z -= paddleSpeed;
+                }
+                if (this.keys.has('ArrowDown') && this.paddle2.position.z < 2.5) {
+                    this.paddle2.position.z += paddleSpeed;
+                }
+            }
+        }
+
+        // Main Game Class
+        class Game {
+            constructor() {
+                this.renderer = new GameRenderer();
+                this.physics = new GamePhysics();
+                this.gameManager = new GameManager();
+                this.inputHandler = new InputHandler(this.renderer.paddle1, this.renderer.paddle2);
+
+                document.getElementById('startButton').addEventListener('click', () => this.startGame());
+                document.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space' && this.gameManager.currentState !== GameState.MENU) {
+                        this.gameManager.togglePause();
+                    }
+                });
+
+                this.animate();
+            }
+
+            startGame() {
+                this.gameManager.setState(GameState.PLAYING);
+                this.renderer.ball.position.copy(this.physics.resetBall());
+            }
+
+            update(deltaTime) {
+                if (this.gameManager.currentState !== GameState.PLAYING) return;
+
+                this.inputHandler.update();
+                
+                const scorer = this.physics.updatePhysics(
+                    this.renderer.ball,
+                    this.renderer.paddle1,
+                    this.renderer.paddle2
+                );
+
+                if (scorer) {
+                    this.gameManager.updateScore(scorer);
+                    this.renderer.ball.position.copy(this.physics.resetBall());
+                }
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+
+                if (this.gameManager.currentState === GameState.PLAYING) {
+                    const deltaTime = this.gameManager.clock.getDelta();
+                    this.gameManager.accumulator += deltaTime;
+
+                    // Fixed time step update
+                    while (this.gameManager.accumulator >= this.gameManager.fixedTimeStep) {
+                        this.update(this.gameManager.fixedTimeStep);
+                        this.gameManager.accumulator -= this.gameManager.fixedTimeStep;
+                    }
+                }
+
+                this.renderer.render();
+            }
+        }
+
+        // Start the game
+        const game = new Game();
+    </script>
+</body>
+</html>
