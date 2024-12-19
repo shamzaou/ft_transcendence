@@ -1,0 +1,13 @@
+# ft_transcendence/srcs/services/auth/requirements.txt
+
+Django>=3.2,<4.0
+djangorestframework
+gunicorn
+psycopg2-binary
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+python-decouple
+requests
+django-otp==1.0.0
+qrcode[pil]

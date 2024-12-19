@@ -1,0 +1,84 @@
+# ft_transcendence/srs/docker-compose.yml
+
+# version: '3.9'
+
+services:
+  auth:
+    build:
+      context: ./services/auth  # Path to the directory with Dockerfile
+    container_name: auth_service  # Container name
+    # labels:
+    #   project: fastpong
+
+    # Run the following commands in sequence:
+    # - Wait for the DB service to be ready
+    # - Apply migrations
+    # - Collect static files
+    # - Start Gunicorn server to serve the Django app
+    command: >
+      sh -c "
+      ./scripts/wait-for-it.sh db:5432 -- &&
+      python manage.py migrate &&
+      python manage.py collectstatic --noinput &&
+      gunicorn --bind 0.0.0.0:8888 auth_service.wsgi:application"  
+    # Use wait-for-it script to wait for PostgreSQL to be ready before starting
+
+    volumes:
+      - ./services/auth:/app  # Mount current auth directory to /app in the container
+
+    ports:
+      - "8888:8888"  # Expose port 8888 for the auth service
+
+    networks:
+      - fastpong_network  # This service will be on the fastpong network
+
+    depends_on:
+      - db  # Ensure the auth service waits for the db container to be ready before starting
+
+    environment:
+      - POSTGRES_DB=auth_service_db
+      - POSTGRES_USER=auth_user
+      - POSTGRES_PASSWORD=auth_password
+      - DB_HOST=db  # Added: Set the DB host to the PostgreSQL container name
+      - DB_PORT=5432  # Added: Set the DB port
+
+  db:
+    image: postgres:13  # Use PostgreSQL version 13 image
+    container_name: postgres_db  # Container name
+    labels:
+      project: fastpong
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Mount the database data volume
+    environment:
+      - POSTGRES_DB=auth_service_db
+      - POSTGRES_USER=auth_user
+      - POSTGRES_PASSWORD=auth_password
+    ports:
+      - "5432:5432"  # Expose PostgreSQL port
+    networks:
+      - fastpong_network  # This service will also be on the fastpong network
+
+volumes:
+  postgres_data:
+    labels:
+      project: fastpong
+
+# Network configuration to isolate services and allow them to communicate with each other
+networks:
+  fastpong_network:
+    driver: bridge  # Use the bridge driver for network isolation
+
+
+# I left this in case comments are still needed
+# With this block, we can create our own isolated network that will only contain certain containers. 
+# This improves security and allows us to manage network settings more finely
+# networks:
+#   # Network named fastpong
+#   fastpong_network:
+#     # labels:
+#     #   project: fastpong
+#     # Specify that we will use the standard Docker bridge driver
+#     # A bridge-type network provides a separate namespace, which provides container isolation. 
+#     # Each container in such a network has its own internal IP address
+#     # Bridge allows containers on the same LAN to communicate with each other
+#     driver: bridge
