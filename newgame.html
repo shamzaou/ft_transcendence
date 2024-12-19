@@ -62,6 +62,34 @@
             left: 50%;
             transform: translate(-50%, -50%);
         }
+        #modeSelection {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .mode-button {
+            font-size: 24px;
+            color: #00ccff;
+            background: transparent;
+            border: 2px solid #00ccff;
+            padding: 15px 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 0 10px #00ccff66;
+        }
+        
+        .mode-button:hover {
+            background: #00ccff22;
+            box-shadow: 0 0 20px #00ccff;
+        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 </head>
@@ -69,9 +97,14 @@
     <div id="score" class="ui-element">00 - 00</div>
     <div id="instructions" class="ui-element">P1: W/S | P2: ↑/↓ | SPACE: Pause</div>
     <div id="pauseText" class="ui-element">PAUSED</div>
-    <button id="startButton" class="game-button">Start Game</button>
+    <div id="modeSelection">
+        <button id="pvpButton" class="mode-button">Player vs Player</button>
+        <button id="aiButton" class="mode-button">Player vs AI</button>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
     <script>
+
         // Game State Management
         const GameState = {
             MENU: 'menu',
@@ -79,19 +112,30 @@
             PAUSED: 'paused'
         };
 
+        const GameMode = {
+            PLAYER_VS_PLAYER: 'pvp',
+            PLAYER_VS_AI: 'ai'
+        };
+
         class GameManager {
             constructor() {
                 this.currentState = GameState.MENU;
+                this.gameMode = null;
                 this.score = { player1: 0, player2: 0 };
                 this.clock = new THREE.Clock();
                 this.fixedTimeStep = 1/60;
                 this.accumulator = 0;
             }
 
+            setGameMode(mode) {
+                this.gameMode = mode;
+            }
+
             setState(newState) {
                 this.currentState = newState;
                 switch(newState) {
                     case GameState.PLAYING:
+                        document.getElementById('modeSelection').style.display = 'none';
                         document.getElementById('startButton').style.display = 'none';
                         document.getElementById('pauseText').style.display = 'none';
                         this.clock.start();
@@ -101,6 +145,7 @@
                         this.clock.stop();
                         break;
                     case GameState.MENU:
+                        document.getElementById('modeSelection').style.display = 'flex';
                         document.getElementById('startButton').style.display = 'block';
                         document.getElementById('pauseText').style.display = 'none';
                         break;
@@ -336,9 +381,10 @@
 
         // Input Handler
         class InputHandler {
-            constructor(paddle1, paddle2) {
+            constructor(paddle1, paddle2, gameManager) {
                 this.paddle1 = paddle1;
                 this.paddle2 = paddle2;
+                this.gameManager = gameManager;
                 this.keys = new Set();
                 
                 document.addEventListener('keydown', (e) => this.keys.add(e.key));
@@ -356,12 +402,14 @@
                     this.paddle1.position.z += paddleSpeed;
                 }
 
-                // Paddle 2 controls
-                if (this.keys.has('ArrowUp') && this.paddle2.position.z > -2.5) {
-                    this.paddle2.position.z -= paddleSpeed;
-                }
-                if (this.keys.has('ArrowDown') && this.paddle2.position.z < 2.5) {
-                    this.paddle2.position.z += paddleSpeed;
+                // Paddle 2 controls (only if in PVP mode)
+                if (this.gameManager.gameMode === GameMode.PLAYER_VS_PLAYER) {
+                    if (this.keys.has('ArrowUp') && this.paddle2.position.z > -2.5) {
+                        this.paddle2.position.z -= paddleSpeed;
+                    }
+                    if (this.keys.has('ArrowDown') && this.paddle2.position.z < 2.5) {
+                        this.paddle2.position.z += paddleSpeed;
+                    }
                 }
             }
         }
@@ -372,12 +420,31 @@
                 this.renderer = new GameRenderer();
                 this.physics = new GamePhysics();
                 this.gameManager = new GameManager();
-                this.inputHandler = new InputHandler(this.renderer.paddle1, this.renderer.paddle2);
+                this.inputHandler = new InputHandler(this.renderer.paddle1, this.renderer.paddle2, this.gameManager);
+                this.ai = null;
 
-                document.getElementById('startButton').addEventListener('click', () => this.startGame());
+                // Setup mode selection handlers
+                document.getElementById('pvpButton').addEventListener('click', () => {
+                    this.gameManager.setGameMode(GameMode.PLAYER_VS_PLAYER);
+                    this.startGame();
+                });
+
+                document.getElementById('aiButton').addEventListener('click', () => {
+                    console.log('AI mode selected'); // Add debug log
+                    this.gameManager.setGameMode(GameMode.PLAYER_VS_AI);
+                    this.ai = new PongAI(this.renderer.paddle2);
+                    console.log('AI created:', this.ai); // Add debug log
+                    this.startGame();
+                });
+
                 document.addEventListener('keydown', (e) => {
                     if (e.code === 'Space' && this.gameManager.currentState !== GameState.MENU) {
-                        this.gameManager.togglePause();
+                        e.preventDefault(); // Add this to prevent any default space behavior
+                        if (this.gameManager.currentState === GameState.PLAYING) {
+                            this.gameManager.setState(GameState.PAUSED);
+                        } else if (this.gameManager.currentState === GameState.PAUSED) {
+                            this.gameManager.setState(GameState.PLAYING);
+                        }
                     }
                 });
 
@@ -386,11 +453,16 @@
 
             startGame() {
                 this.gameManager.setState(GameState.PLAYING);
+                document.getElementById('modeSelection').style.display = 'none';
                 this.renderer.ball.position.copy(this.physics.resetBall());
             }
 
             update(deltaTime) {
                 if (this.gameManager.currentState !== GameState.PLAYING) return;
+
+                if (this.gameManager.gameMode === GameMode.PLAYER_VS_AI) {
+                    this.ai.update(this.renderer.ball, this.physics.ballVelocity);
+                }
 
                 this.inputHandler.update();
                 
@@ -424,6 +496,101 @@
             }
         }
 
+        // AI Class
+        class PongAI {
+            constructor(paddle) {
+                this.paddle = paddle;
+                this.lastUpdateTime = 0;
+                this.updateInterval = 1000;  // Update decision-making once per second
+                this.nextMove = null;
+                this.predictedBallPath = [];
+                this.reactionAccuracy = 0.8;
+            }
+
+            predictBallPath(ball, ballVelocity) {
+                const predictions = [];
+                let predictedPos = {
+                    x: ball.position.x,
+                    y: ball.position.y,
+                    z: ball.position.z
+                };
+                let predictedVel = {
+                    x: ballVelocity.x,
+                    z: ballVelocity.z
+                };
+
+                // Predict for next 2 seconds (longer prediction window)
+                for (let t = 0; t < 2000; t += 16.67) {  // Use small time steps for accurate prediction
+                    predictedPos.x += predictedVel.x * (16.67/1000);
+                    predictedPos.z += predictedVel.z * (16.67/1000);
+
+                    // Check for wall collisions
+                    if (predictedPos.z <= -2.9 || predictedPos.z >= 2.9) {
+                        predictedVel.z *= -1;
+                    }
+
+                    predictions.push({ ...predictedPos });
+
+                    // Stop predicting if ball would hit paddle plane
+                    if (predictedPos.x >= 4.7) break;
+                }
+
+                return predictions;
+            }
+
+            findPaddleIntersection(predictions) {
+                return predictions.find(pos => pos.x >= 4.7);
+            }
+
+            update(ball, ballVelocity) {
+                const currentTime = Date.now();
+                const paddleSpeed = 0.15;
+
+                // Continue executing current move between updates
+                if (currentTime - this.lastUpdateTime < this.updateInterval) {
+                    if (this.nextMove) {
+                        if (this.nextMove === 'up' && this.paddle.position.z > -2.5) {
+                            this.paddle.position.z -= paddleSpeed;
+                        } else if (this.nextMove === 'down' && this.paddle.position.z < 2.5) {
+                            this.paddle.position.z += paddleSpeed;
+                        }
+                    }
+                    return;
+                }
+
+                // Time to make a new decision
+                this.lastUpdateTime = currentTime;
+                this.nextMove = null;
+
+                // Only predict if ball is moving towards AI
+                if (ballVelocity.x > 0) {
+                    // Predict ball path
+                    this.predictedBallPath = this.predictBallPath(ball, ballVelocity);
+                    const intersection = this.findPaddleIntersection(this.predictedBallPath);
+
+                    if (intersection) {
+                        // Add randomization for human-like behavior
+                        const randomError = (Math.random() - 0.5) * (1 - this.reactionAccuracy);
+                        const targetZ = intersection.z + randomError;
+
+                        // Set next move based on prediction
+                        if (this.paddle.position.z < targetZ - 0.2) {
+                            this.nextMove = 'down';
+                        } else if (this.paddle.position.z > targetZ + 0.2) {
+                            this.nextMove = 'up';
+                        }
+                    }
+                } else {
+                    // When ball moving away, return to center with some randomization
+                    const centerOffset = (Math.random() - 0.5) * 0.5;
+                    if (this.paddle.position.z < centerOffset - 0.2) {
+                        this.nextMove = 'down';
+                    } else if (this.paddle.position.z > centerOffset + 0.2) {
+                        this.nextMove = 'up';
+                    }
+                }
+            }
+        }
         // Start the game
         const game = new Game();
     </script>
