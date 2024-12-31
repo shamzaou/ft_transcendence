@@ -130,7 +130,7 @@
             const email = document.getElementById('id_email').value;
             const password1 = document.getElementById('id_password1').value;
             const password2 = document.getElementById('id_password2').value;
-            const profilePicture = document.getElementById('id_profile_picture').files[0]; // Get the selected file
+            // const profilePicture = document.getElementById('id_profile_picture').files[0]; // Get the selected file
 
             // Validate that passwords match
             if (password1 !== password2) {
@@ -145,9 +145,9 @@
             formData.append('password', password1);
 
             // Append the profile picture only if a file is chosen
-            if (profilePicture) {
-                formData.append('profile_picture', profilePicture);
-            }
+            // if (profilePicture) {
+            //     formData.append('profile_picture', profilePicture);
+            // }
 
             try {
                 // Send the form data to the server

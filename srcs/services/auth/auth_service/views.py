@@ -36,7 +36,7 @@ def register_user(request):
         username = request.POST.get('username')
         password = request.POST.get('password')
         email = request.POST.get('email')
-        profile_picture = request.FILES.get('profile_picture')
+        # profile_picture = request.FILES.get('profile_picture')
 
         if not username or not password or not email:
             return Response({"error": "Username, password, and email are required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -49,14 +49,14 @@ def register_user(request):
         user = User.objects.create_user(username=username, password=password, email=email)
 
         # Handle the profile picture
-        if profile_picture:
-            file_path = default_storage.save(f"profile_pictures/{username}_{profile_picture.name}", ContentFile(profile_picture.read()))
-            user.profile.profile_picture = file_path
-        else:
-            # Set a default profile picture if not provided
-            user.profile.profile_picture = 'default_profile_picture.png'
+        # if profile_picture:
+        #     file_path = default_storage.save(f"profile_pictures/{username}_{profile_picture.name}", ContentFile(profile_picture.read()))
+        #     user.profile.profile_picture = file_path
+        # else:
+        #     # Set a default profile picture if not provided
+        #     user.profile.profile_picture = 'default_profile_picture.png'
 
-        user.profile.save()
+        # user.profile.save()
 
         return Response({"message": "User registered successfully"}, status=status.HTTP_201_CREATED)
     except json.JSONDecodeError:

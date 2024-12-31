@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'corsheaders',
+    'auth_service',
     'django_otp', #for google authenticator
     'django_otp.plugins.otp_totp',
 ]
