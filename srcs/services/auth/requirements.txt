@@ -11,3 +11,5 @@ python-decouple
 requests
 django-otp==1.0.0
 qrcode[pil]
+sendgrid-django
+djangorestframework

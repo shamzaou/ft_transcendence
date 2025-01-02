@@ -17,11 +17,16 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from django.http import HttpResponseNotFound
-from auth_service.views import register_view, login_view, redirect_uri, get_user_info, oauth_callback
+# from auth_service.views import register_view, login_view, redirect_uri, get_user_info, oauth_callback
 from . import views
 from django.conf import settings
 from django.conf.urls.static import static
- 
+# from .views import login_view, verify_otp_view
+
+from auth_service.views import (
+    register_view, login_view, redirect_uri, get_user_info, oauth_callback, verify_otp_view
+)
+
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -29,10 +34,12 @@ from rest_framework_simplejwt.views import (
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('login/', views.login_view, name='login'),
+    path('login/', views.login_view, name='login'),  # Login HTML page
+    path('api/login/', views.login_api, name='login_api'),  # Login API endpoint
     path('register/', views.register_view, name='register'),
     path('homepage/', views.homepage_view, name='homepage'),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/verify-otp/', verify_otp_view, name='verify_otp'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/register/', views.register_user, name='register_user'),
     path('', views.homepage_view, name='root'),
