@@ -501,95 +501,115 @@
             constructor(paddle) {
                 this.paddle = paddle;
                 this.lastUpdateTime = 0;
-                this.updateInterval = 1000;  // Update decision-making once per second
+                
+                // AI personality parameters
+                this.REACTION_DELAY = 1000;      // 150ms reaction time
+                this.ACCURACY = 0.45;           // 85% accuracy
+                this.MAX_SPEED = 0.10;          // Maximum movement speed
+                this.MISTAKE_CHANCE = 0.15;      // 10% chance to make mistakes
+                this.UPDATE_INTERVAL = 1000;      // 50ms update interval (more responsive)
+                
+                // State variables
                 this.nextMove = null;
-                this.predictedBallPath = [];
-                this.reactionAccuracy = 0.8;
-            }
-
-            predictBallPath(ball, ballVelocity) {
-                const predictions = [];
-                let predictedPos = {
-                    x: ball.position.x,
-                    y: ball.position.y,
-                    z: ball.position.z
-                };
-                let predictedVel = {
-                    x: ballVelocity.x,
-                    z: ballVelocity.z
-                };
-
-                // Predict for next 2 seconds (longer prediction window)
-                for (let t = 0; t < 2000; t += 16.67) {  // Use small time steps for accurate prediction
-                    predictedPos.x += predictedVel.x * (16.67/1000);
-                    predictedPos.z += predictedVel.z * (16.67/1000);
-
-                    // Check for wall collisions
-                    if (predictedPos.z <= -2.9 || predictedPos.z >= 2.9) {
-                        predictedVel.z *= -1;
-                    }
-
-                    predictions.push({ ...predictedPos });
-
-                    // Stop predicting if ball would hit paddle plane
-                    if (predictedPos.x >= 4.7) break;
-                }
-
-                return predictions;
-            }
-
-            findPaddleIntersection(predictions) {
-                return predictions.find(pos => pos.x >= 4.7);
+                this.targetZ = null;
+                this.difficultyUpdateTime = 0;
+                this.difficultyUpdateInterval = 5000; // Update difficulty every 5 seconds
             }
 
             update(ball, ballVelocity) {
                 const currentTime = Date.now();
-                const paddleSpeed = 0.15;
+                
+                // Update difficulty periodically based on score
+                if (currentTime - this.difficultyUpdateTime > this.difficultyUpdateInterval) {
+                    // this.updateDifficulty();
+                    this.difficultyUpdateTime = currentTime;
+                }
 
-                // Continue executing current move between updates
-                if (currentTime - this.lastUpdateTime < this.updateInterval) {
-                    if (this.nextMove) {
-                        if (this.nextMove === 'up' && this.paddle.position.z > -2.5) {
-                            this.paddle.position.z -= paddleSpeed;
-                        } else if (this.nextMove === 'down' && this.paddle.position.z < 2.5) {
-                            this.paddle.position.z += paddleSpeed;
-                        }
-                    }
+                // Add reaction delay
+                if (currentTime - this.lastUpdateTime < this.REACTION_DELAY) {
+                    this.executeMove();
                     return;
                 }
 
                 // Time to make a new decision
+                if (currentTime - this.lastUpdateTime < this.UPDATE_INTERVAL) {
+                    this.executeMove();
+                    return;
+                }
+                
                 this.lastUpdateTime = currentTime;
-                this.nextMove = null;
+                this.decideNextMove(ball, ballVelocity);
+                this.executeMove();
+            }
 
-                // Only predict if ball is moving towards AI
+            decideNextMove(ball, ballVelocity) {
+                // Only make decisions when ball is moving towards AI
                 if (ballVelocity.x > 0) {
-                    // Predict ball path
-                    this.predictedBallPath = this.predictBallPath(ball, ballVelocity);
-                    const intersection = this.findPaddleIntersection(this.predictedBallPath);
+                    // Calculate perfect prediction
+                    const timeToIntercept = (this.paddle.position.x - ball.position.x) / ballVelocity.x;
+                    const perfectZ = ball.position.z + (ballVelocity.z * timeToIntercept);
 
-                    if (intersection) {
-                        // Add randomization for human-like behavior
-                        const randomError = (Math.random() - 0.5) * (1 - this.reactionAccuracy);
-                        const targetZ = intersection.z + randomError;
+                    // Add intentional prediction error
+                    const predictionError = (Math.random() - 0.5) * (1 - this.ACCURACY) * 1.0;
+                    this.targetZ = perfectZ + predictionError;
 
-                        // Set next move based on prediction
-                        if (this.paddle.position.z < targetZ - 0.2) {
-                            this.nextMove = 'down';
-                        } else if (this.paddle.position.z > targetZ + 0.2) {
-                            this.nextMove = 'up';
-                        }
+                    // Occasionally make bigger mistakes
+                    if (Math.random() < this.MISTAKE_CHANCE) {
+                        this.targetZ += (Math.random() - 0.5) * 2.0;
                     }
+
                 } else {
-                    // When ball moving away, return to center with some randomization
-                    const centerOffset = (Math.random() - 0.5) * 0.5;
-                    if (this.paddle.position.z < centerOffset - 0.2) {
-                        this.nextMove = 'down';
-                    } else if (this.paddle.position.z > centerOffset + 0.2) {
-                        this.nextMove = 'up';
-                    }
+                    // Return to center with some randomization when ball moving away
+                    this.targetZ = (Math.random() - 0.5) * 0.5;
+                }
+
+                // Decide movement based on target position
+                if (this.paddle.position.z < this.targetZ - 0.1) {
+                    this.nextMove = 'down';
+                } else if (this.paddle.position.z > this.targetZ + 0.1) {
+                    this.nextMove = 'up';
+                } else {
+                    this.nextMove = null;
                 }
             }
+
+            executeMove() {
+                // Calculate movement speed with acceleration
+                const distanceToTarget = Math.abs(this.paddle.position.z - (this.targetZ || 0));
+                const speed = Math.min(this.MAX_SPEED, distanceToTarget / 10);
+
+                if (this.nextMove === 'up' && this.paddle.position.z > -2.5) {
+                    this.paddle.position.z -= speed;
+                } else if (this.nextMove === 'down' && this.paddle.position.z < 2.5) {
+                    this.paddle.position.z += speed;
+                }
+            }
+
+            // updateDifficulty() {
+            //     // Assuming you have access to game score
+            //     // You'll need to modify this to access your game's actual score
+            //     const scoreDiff = 0; // Replace with actual score difference
+
+            //     if (scoreDiff > 3) {
+            //         // Make AI worse if winning by too much
+            //         this.ACCURACY = 0.75;
+            //         this.MISTAKE_CHANCE = 0.15;
+            //         this.REACTION_DELAY = 200;
+            //         this.MAX_SPEED = 0.10;
+            //     } else if (scoreDiff < -3) {
+            //         // Make AI better if losing by too much
+            //         this.ACCURACY = 0.90;
+            //         this.MISTAKE_CHANCE = 0.05;
+            //         this.REACTION_DELAY = 100;
+            //         this.MAX_SPEED = 0.14;
+            //     } else {
+            //         // Default values for close games
+            //         this.ACCURACY = 0.85;
+            //         this.MISTAKE_CHANCE = 0.10;
+            //         this.REACTION_DELAY = 150;
+            //         this.MAX_SPEED = 0.12;
+            //     }
+            // }
         }
         // Start the game
         const game = new Game();
