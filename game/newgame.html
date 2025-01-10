@@ -171,7 +171,7 @@
         class GamePhysics {
             constructor() {
                 this.maxBallSpeed = 0.15;
-                this.minBallSpeed = 0.06;
+                this.minBallSpeed = 0.1;
                 this.ballVelocity = new THREE.Vector3();
                 this.ballSpin = new THREE.Vector3();
                 this.resetBall();
@@ -460,7 +460,7 @@
             update(deltaTime) {
                 if (this.gameManager.currentState !== GameState.PLAYING) return;
 
-                if (this.gameManager.gameMode === GameMode.PLAYER_VS_AI) {
+                if (this.gameManager.gameMode === GameMode.PLAYER_VS_AI && this.ai) {
                     this.ai.update(this.renderer.ball, this.physics.ballVelocity);
                 }
 
@@ -502,16 +502,20 @@
                 this.paddle = paddle;
                 this.lastUpdateTime = 0;
                 
-                // AI personality parameters
-                this.REACTION_DELAY = 1000;      // 150ms reaction time
-                this.ACCURACY = 0.45;           // 85% accuracy
-                this.MAX_SPEED = 0.10;          // Maximum movement speed
-                this.MISTAKE_CHANCE = 0.15;      // 10% chance to make mistakes
-                this.UPDATE_INTERVAL = 1000;      // 50ms update interval (more responsive)
+                // Change these to make the AI only "look" every 1 second
+                this.UPDATE_INTERVAL = 1000;    // Only look at ball position every 1000ms
+                this.REACTION_DELAY = 1500;      // Still keep some reaction delay
                 
-                // State variables
-                this.nextMove = null;
-                this.targetZ = null;
+                // Keep track of the last seen ball position
+                this.lastSeenBallPosition = null;
+                this.lastSeenBallVelocity = null;
+                
+                // AI personality parameters
+                this.ACCURACY = 0.85;
+                this.MAX_SPEED = 0.10;
+                this.MISTAKE_CHANCE = 0.10;
+                
+                // Difficulty adjustment parameters
                 this.difficultyUpdateTime = 0;
                 this.difficultyUpdateInterval = 5000; // Update difficulty every 5 seconds
             }
@@ -521,45 +525,37 @@
                 
                 // Update difficulty periodically based on score
                 if (currentTime - this.difficultyUpdateTime > this.difficultyUpdateInterval) {
-                    // this.updateDifficulty();
+                    this.updateDifficulty();
                     this.difficultyUpdateTime = currentTime;
                 }
-
-                // Add reaction delay
-                if (currentTime - this.lastUpdateTime < this.REACTION_DELAY) {
-                    this.executeMove();
-                    return;
-                }
-
-                // Time to make a new decision
-                if (currentTime - this.lastUpdateTime < this.UPDATE_INTERVAL) {
-                    this.executeMove();
-                    return;
-                }
                 
-                this.lastUpdateTime = currentTime;
-                this.decideNextMove(ball, ballVelocity);
+                // Only look at the ball every second (UPDATE_INTERVAL)
+                if (currentTime - this.lastUpdateTime >= this.UPDATE_INTERVAL) {
+                    this.lastUpdateTime = currentTime;
+                    this.lastSeenBallPosition = { x: ball.position.x, z: ball.position.z };
+                    this.lastSeenBallVelocity = { x: ballVelocity.x, z: ballVelocity.z };
+                    this.decideNextMove(this.lastSeenBallPosition, this.lastSeenBallVelocity);
+                }
+
+                // Execute movement based on last decision
                 this.executeMove();
             }
 
             decideNextMove(ball, ballVelocity) {
                 // Only make decisions when ball is moving towards AI
                 if (ballVelocity.x > 0) {
-                    // Calculate perfect prediction
-                    const timeToIntercept = (this.paddle.position.x - ball.position.x) / ballVelocity.x;
-                    const perfectZ = ball.position.z + (ballVelocity.z * timeToIntercept);
+                    // Calculate prediction based on last seen position
+                    const timeToIntercept = (this.paddle.position.x - ball.x) / ballVelocity.x;
+                    const perfectZ = ball.z + (ballVelocity.z * timeToIntercept);
 
                     // Add intentional prediction error
                     const predictionError = (Math.random() - 0.5) * (1 - this.ACCURACY) * 1.0;
                     this.targetZ = perfectZ + predictionError;
 
-                    // Occasionally make bigger mistakes
                     if (Math.random() < this.MISTAKE_CHANCE) {
                         this.targetZ += (Math.random() - 0.5) * 2.0;
                     }
-
                 } else {
-                    // Return to center with some randomization when ball moving away
                     this.targetZ = (Math.random() - 0.5) * 0.5;
                 }
 
@@ -585,31 +581,31 @@
                 }
             }
 
-            // updateDifficulty() {
-            //     // Assuming you have access to game score
-            //     // You'll need to modify this to access your game's actual score
-            //     const scoreDiff = 0; // Replace with actual score difference
+            updateDifficulty() {
+                // Assuming you have access to game score
+                // You'll need to modify this to access your game's actual score
+                const scoreDiff = 0; // Replace with actual score difference
 
-            //     if (scoreDiff > 3) {
-            //         // Make AI worse if winning by too much
-            //         this.ACCURACY = 0.75;
-            //         this.MISTAKE_CHANCE = 0.15;
-            //         this.REACTION_DELAY = 200;
-            //         this.MAX_SPEED = 0.10;
-            //     } else if (scoreDiff < -3) {
-            //         // Make AI better if losing by too much
-            //         this.ACCURACY = 0.90;
-            //         this.MISTAKE_CHANCE = 0.05;
-            //         this.REACTION_DELAY = 100;
-            //         this.MAX_SPEED = 0.14;
-            //     } else {
-            //         // Default values for close games
-            //         this.ACCURACY = 0.85;
-            //         this.MISTAKE_CHANCE = 0.10;
-            //         this.REACTION_DELAY = 150;
-            //         this.MAX_SPEED = 0.12;
-            //     }
-            // }
+                if (scoreDiff > 3) {
+                    // Make AI worse if winning by too much
+                    this.ACCURACY = 0.15;
+                    this.MISTAKE_CHANCE = 0.15;
+                    this.REACTION_DELAY = 2000;
+                    this.MAX_SPEED = 0.10;
+                } else if (scoreDiff < -3) {
+                    // Make AI better if losing by too much
+                    this.ACCURACY = 0.15;
+                    this.MISTAKE_CHANCE = 0.05;
+                    this.REACTION_DELAY = 1000;
+                    this.MAX_SPEED = 0.14;
+                } else {
+                    // Default values for close games
+                    this.ACCURACY = 0.15;
+                    this.MISTAKE_CHANCE = 0.10;
+                    this.REACTION_DELAY = 1500;
+                    this.MAX_SPEED = 0.12;
+                }
+            }
         }
         // Start the game
         const game = new Game();
