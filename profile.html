@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - ft_transcendence</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@300;400;700&display=swap');
+
+        :root {
+            --primary-color: #00ff00;
+            --secondary-color: #ff00ff;
+            --background-color: #000000;
+            --text-color: #ffffff;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            overflow-x: hidden;
+            font-size: 16px;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.25em;
+            position: relative;
+        }
+
+        header {
+            padding: 1.25em 0;
+            border-bottom: 0.125em solid var(--primary-color);
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .logo {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1.5em;
+            text-decoration: none;
+            color: var(--primary-color);
+            text-shadow: 0.125em 0.125em var(--secondary-color);
+        }
+
+        .nav-links {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            padding: 0;
+            align-items: center; /* Add this line */
+            margin: 0; /* Add this line */
+        }
+
+        .nav-links li {
+            margin-left: 1.25em;
+        }
+
+        .nav-links a {
+            font-family: 'Press Start 2P', cursive;
+            text-decoration: none;
+            color: var(--text-color);
+            transition: color 0.3s ease;
+            font-size: 0.75em;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary-color);
+        }
+
+        /* Avatar dropdown styles */
+        .avatar-dropdown {
+            position: relative;
+            display: flex; /* Add this line */
+            align-items: center; /* Add this line */
+        }
+
+        .avatar-container {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .nav-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid var(--primary-color);
+            transition: border-color 0.3s ease;
+            display: block;
+        }
+
+        .nav-avatar:hover {
+            border-color: var(--secondary-color);
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: calc(100% + 5px); /* Add a small gap between avatar and dropdown */
+            background-color: var(--background-color);
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+            min-width: 150px;
+            z-index: 1000;
+        }
+
+        .avatar-dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        .dropdown-item {
+            display: block;
+            padding: 0.75em 1em;
+            color: var(--text-color);
+            text-decoration: none;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.75em;
+            transition: background-color 0.3s ease;
+        }
+
+        .dropdown-item:hover {
+            background-color: rgba(0, 255, 0, 0.1);
+        }
+
+        .dropdown-item.logout {
+            color: #ff4444;
+        }
+
+        .dropdown-item.logout:hover {
+            background-color: rgba(255, 0, 0, 0.1);
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 3px;
+            background-color: var(--primary-color);
+            margin: 2px 0;
+            transition: 0.4s;
+        }
+
+        main {
+            padding: 2em 0;
+            position: relative;
+        }
+
+        h1 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 2em;
+            color: var(--primary-color);
+            margin-bottom: 0.8em;
+            text-align: center;
+            text-shadow: 0.08em 0.08em var(--secondary-color);
+        }
+
+        /* Profile specific styles */
+        .profile-container {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 2em;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 2em;
+            margin-bottom: 2em;
+        }
+
+        .profile-avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 3px solid var(--primary-color);
+            background-color: var(--secondary-color);
+        }
+
+        .profile-info h2 {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--primary-color);
+            font-size: 1.5em;
+            margin-bottom: 0.5em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5em;
+            margin-top: 2em;
+        }
+
+        .stat-card {
+            background-color: rgba(0, 255, 0, 0.1);
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+            padding: 1em;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8em;
+            color: var(--primary-color);
+            margin-bottom: 0.5em;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .match-history {
+            margin-top: 2em;
+        }
+
+        .match-card {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1em;
+            margin-bottom: 1em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .match-result {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8em;
+        }
+
+        .match-result.win {
+            color: var(--primary-color);
+        }
+
+        .match-result.loss {
+            color: var(--secondary-color);
+        }
+
+        @media (max-width: 768px) {
+            .hamburger {
+                display: flex;
+            }
+
+            .nav-links {
+                display: none;
+                width: 100%;
+                text-align: center;
+                padding-top: 1em;
+            }
+
+            .nav-links.active {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .nav-links li {
+                margin: 0.5em 0;
+            }
+
+            .profile-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .profile-avatar {
+                width: 120px;
+                height: 120px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body, html {
+                font-size: 12px;
+            }
+
+            .logo {
+                font-size: 1.25em;
+            }
+
+            .profile-container {
+                padding: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="#" class="logo">PONG</a>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <ul class="nav-links">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="tictactoe.html">TicTacToe</a></li>
+                    <li><a href="profile.html" class="active">Profile</a></li>
+                    <li class="avatar-dropdown">
+                        <div class="avatar-container">
+                            <img src="man.png" alt="User Avatar" class="nav-avatar">
+                            <div class="dropdown-content">
+                                <a href="#" class="dropdown-item logout">Logout</a>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <h1>Player Profile</h1>
+            <div class="profile-container">
+                <div class="profile-header">
+                    <img src="man.png" alt="Profile Avatar" class="profile-avatar">
+                    <div class="profile-info">
+                        <h2>PlayerOne</h2>
+                        <p>Joined: January 2024</p>
+                        <p>Rank: #42 Global</p>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Games Played</h3>
+                        <div class="stat-value">156</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Win Rate</h3>
+                        <div class="stat-value">68%</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Best Score</h3>
+                        <div class="stat-value">11-0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Tournament Wins</h3>
+                        <div class="stat-value">3</div>
+                    </div>
+                </div>
+
+                <div class="match-history">
+                    <h2>Recent Matches</h2>
+                    <div class="match-card">
+                        <span>vs. Player2</span>
+                        <span>11-9</span>
+                        <span class="match-result win">WIN</span>
+                    </div>
+                    <div class="match-card">
+                        <span>vs. Player3</span>
+                        <span>7-11</span>
+                        <span class="match-result loss">LOSS</span>
+                    </div>
+                    <div class="match-card">
+                        <span>vs. Player4</span>
+                        <span>11-5</span>
+                        <span class="match-result win">WIN</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const hamburger = document.querySelector('.hamburger');
+            const navLinks = document.querySelector('.nav-links');
+
+            hamburger.addEventListener('click', () => {
+                navLinks.classList.toggle('active');
+            });
+        });
+    </script>
+</body>
+</html>
