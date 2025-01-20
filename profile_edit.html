@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - ft_transcendence</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@300;400;700&display=swap');
+
+        :root {
+            --primary-color: #00ff00;
+            --secondary-color: #ff00ff;
+            --background-color: #000000;
+            --text-color: #ffffff;
+            --danger-color: #ff4444;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            overflow-x: hidden;
+            font-size: 16px;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.25em;
+            position: relative;
+        }
+
+        header {
+            padding: 1.25em 0;
+            border-bottom: 0.125em solid var(--primary-color);
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .logo {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1.5em;
+            text-decoration: none;
+            color: var(--primary-color);
+            text-shadow: 0.125em 0.125em var(--secondary-color);
+        }
+
+        .nav-links {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            padding: 0;
+            align-items: center;
+            margin: 0;
+        }
+
+        .nav-links li {
+            margin-left: 1.25em;
+        }
+
+        .nav-links a {
+            font-family: 'Press Start 2P', cursive;
+            text-decoration: none;
+            color: var(--text-color);
+            transition: color 0.3s ease;
+            font-size: 0.75em;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary-color);
+        }
+
+        h1 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 2em;
+            color: var(--primary-color);
+            margin-bottom: 0.8em;
+            text-align: center;
+            text-shadow: 0.08em 0.08em var(--secondary-color);
+        }
+
+        .settings-container {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 2em;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .settings-section {
+            margin-bottom: 2em;
+            padding-bottom: 2em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .settings-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .settings-section h2 {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--primary-color);
+            font-size: 1.2em;
+            margin-bottom: 1em;
+        }
+
+        .form-group {
+            margin-bottom: 1.5em;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5em;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8em;
+            color: var(--text-color);
+        }
+
+        .field-container {
+            display: flex;
+            align-items: center;
+            gap: 1em;
+        }
+
+        .field-display {
+            flex-grow: 1;
+            padding: 0.8em;
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 2px solid transparent;
+            border-radius: 4px;
+            color: var(--text-color);
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .field-input {
+            flex-grow: 1;
+            padding: 0.8em;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 2px solid var(--primary-color);
+            border-radius: 4px;
+            color: var(--text-color);
+            font-family: 'Roboto', sans-serif;
+            display: none;
+        }
+
+        .edit-btn {
+            padding: 0.5em 1em;
+            background-color: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            border-radius: 4px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.7em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .edit-btn:hover {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+        }
+
+        .edit-btn.save {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+        }
+
+        .editing .field-display {
+            display: none;
+        }
+
+        .editing .field-input {
+            display: block;
+        }
+
+        .avatar-upload {
+            display: flex;
+            align-items: center;
+            gap: 2em;
+            margin-bottom: 1em;
+        }
+
+        .current-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 3px solid var(--primary-color);
+        }
+
+        .upload-btn {
+            background-color: rgba(0, 255, 0, 0.1);
+            border: 2px solid var(--primary-color);
+            color: var(--text-color);
+            padding: 0.8em 1.5em;
+            cursor: pointer;
+            border-radius: 4px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8em;
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            background-color: rgba(0, 255, 0, 0.2);
+        }
+
+        .btn {
+            padding: 0.8em 1.5em;
+            border: none;
+            border-radius: 4px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+        }
+
+        .btn-primary:hover {
+            background-color: #00cc00;
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: var(--text-color);
+        }
+
+        .btn-danger:hover {
+            background-color: #ff2222;
+        }
+
+        .btn-secondary {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+            border: 2px solid var(--text-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .gdpr-notice {
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 1em;
+            border-radius: 4px;
+            margin-top: 1em;
+            font-size: 0.9em;
+        }
+
+        .danger-zone {
+            background-color: rgba(255, 68, 68, 0.1);
+            border: 2px solid var(--danger-color);
+            border-radius: 8px;
+            padding: 1.5em;
+        }
+
+        @media (max-width: 768px) {
+            .avatar-upload {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .settings-container {
+                padding: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="#" class="logo">PONG</a>
+                <ul class="nav-links">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="tictactoe.html">TicTacToe</a></li>
+                    <li><a href="profile.html">Profile</a></li>
+                    <li><a href="settings.html" class="active">Settings</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <h1>User Settings</h1>
+            <div class="settings-container">
+                <form id="settings-form">
+                    <div class="settings-section">
+                        <h2>Profile Information</h2>
+                        <div class="form-group">
+                            <label for="username">Username*</label>
+                            <div class="field-container">
+                                <div class="field-display">PlayerOne</div>
+                                <input type="text" class="field-input" id="username" name="username" value="PlayerOne" required>
+                                <button type="button" class="edit-btn" data-field="username">Edit</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="display-name">Display Name (Optional)</label>
+                            <div class="field-container">
+                                <div class="field-display">The Champion</div>
+                                <input type="text" class="field-input" id="display-name" name="display-name" value="The Champion">
+                                <button type="button" class="edit-btn" data-field="display-name">Edit</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email Address*</label>
+                            <div class="field-container">
+                                <div class="field-display">player1@example.com</div>
+                                <input type="email" class="field-input" id="email" name="email" value="player1@example.com" required>
+                                <button type="button" class="edit-btn" data-field="email">Edit</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h2>Avatar</h2>
+                        <div class="avatar-upload">
+                            <img src="man.png" alt="Current Avatar" class="current-avatar">
+                            <input type="file" id="avatar-upload" hidden accept="image/*">
+                            <label for="avatar-upload" class="upload-btn">Choose New Avatar</label>
+                        </div>
+                        <div class="gdpr-notice">
+                            Note: Uploaded avatars are stored securely and will be automatically compressed. 
+                            Maximum file size: 5MB.
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h2>Data & Privacy</h2>
+                        <div class="form-group">
+                            <button type="button" class="btn btn-secondary" id="download-data">
+                                Download My Data
+                            </button>
+                            <div class="gdpr-notice">
+                                Your data includes: profile information, game history, statistics, and preferences.
+                                Format: JSON
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h2>Save Changes</h2>
+                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                    </div>
+
+                    <div class="danger-zone">
+                        <h2>Danger Zone</h2>
+                        <p>Once you delete your account, there is no going back. Please be certain.</p>
+                        <button type="button" class="btn btn-danger" id="delete-account">
+                            Delete My Account
+                        </button>
+                        <div class="gdpr-notice">
+                            This will permanently delete your account and all associated data.
+                            This action cannot be undone.
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Avatar upload preview
+            const avatarUpload = document.getElementById('avatar-upload');
+            const currentAvatar = document.querySelector('.current-avatar');
+
+            avatarUpload.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        currentAvatar.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Edit button functionality
+            document.querySelectorAll('.edit-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    const fieldContainer = button.closest('.field-container');
+                    const isEditing = fieldContainer.classList.contains('editing');
+                    
+                    if (isEditing) {
+                        // Save the changes
+                        const input = fieldContainer.querySelector('.field-input');
+                        const display = fieldContainer.querySelector('.field-display');
+                        display.textContent = input.value;
+                        
+                        // Reset the UI
+                        fieldContainer.classList.remove('editing');
+                        button.textContent = 'Edit';
+                        button.classList.remove('save');
+                        
+                        // Here you would typically make an API call to save the changes
+                        console.log(`Saving ${input.name}: ${input.value}`);
+                    } else {
+                        // Enter edit mode
+                        fieldContainer.classList.add('editing');
+                        button.textContent = 'Save';
+                        button.classList.add('save');
+                        
+                        // Focus the input
+                        const input = fieldContainer.querySelector('.field-input');
+                        input.focus();
+                    }
+                });
+            });
+
+            // Form submission
+            const settingsForm = document.getElementById('settings-form');
+            settingsForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                // Add your form submission logic here
+                alert('Settings saved successfully!');
+            });
+
+            // Download data
+            const downloadDataBtn = document.getElementById('download-data');
+            downloadDataBtn.addEventListener('click', () => {
+                // Add your data download logic here
+                alert('Your data is being prepared for download...');
+            });
+
+            // Delete account
+            const deleteAccountBtn = document.getElementById('delete-account');
+            deleteAccountBtn.addEventListener('click', () => {
+                const confirmed = confirm(
+                    'Are you sure you want to delete your account? This action cannot be undone.'
+                );
+                if (confirmed) {
+                    // Add your account deletion logic here
+                    alert('Account deletion initiated...');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
